@@ -19,10 +19,13 @@ GESIS_panel <- campus_panel %>%
 ```
 
 ```{r zeilen und spalten}
-Zeilen <- nrow(GESIS_panel)
-Spalten <- ncol(GESIS_panel)
+zeilen_spalten <- GESIS_panel %>% 
+  summarise(rows = n(),
+            columns = ncol(GESIS_panel))
+
+zeilen_spalten
 ```
-Der Datensatz `GESIS_panel` beinhaltet `r toString(Zeilen)` Zeilen und `r toString(Spalten)` Spalten.
+Der Datensatz `GESIS_panel` beinhaltet `r toString(zeilen_spalten$rows)` Zeilen und `r toString(zeilen_spalten$columns)` Spalten.
 
 ```{r variable}
 str(GESIS_panel$bcaj051a)
@@ -36,13 +39,13 @@ Der Wert `-99` liegt vor, wenn die Person die Frage nicht beantwortet hat. <br /
 Der Wert `-111` erscheint, wenn die Antwort im Fragebogen zweideutig ist. 
 
 
-Wenn alle Missings gleich behandelt werden, kommt es im Vergleich zur GESIS Kategorisierung zu Informationsverlust. Durch die verschiedenen Missings koennen Fragen viel besser verstanden werden. Wenn nachvollzogen werden kann, wieso die einzelnen Ites nicht beantwortet wurden, kann daraus gelernt werden und kuenftige Fragen anders gestellt werden. Bei zukuenftigen Befragungen koennen so potenziell Missings vermieden werden. Gerade fuer die Methodenforschungs sind diese Informationen relevant.
+Wenn alle Missings gleich behandelt werden, kommt es im Vergleich zur GESIS Kategorisierung zu Informationsverlust. Durch die verschiedenen Missings koennen Antworten viel besser verstanden werden. Wenn nachvollzogen werden kann, wieso die einzelnen Items nicht beantwortet wurden, kann daraus gelernt werden und kuenftige Fragen anders gestellt werden. Bei zukuenftigen Befragungen koennen so potenziell Missings vermieden werden. Gerade fuer die Methodenforschungs sind diese Informationen relevant.
 
 # Aufgabe 1.2
 ```{r lebenszufriedenheit im panel}
 str(GESIS_panel$bcan111a)
 ```
-Die Variable `bcan111a` misst die gegenwaertige Zufriedenheit und die dazugehoerige single choice Frage lautet: "Wie zufrieden sind Sie - alles in allem - mit Ihrem gegenwärtigen Leben?".
+Die Variable `bcan111a` misst die gegenwaertige Zufriedenheit von 0 bis 10 Punkten. Die dazugehoerige single choice Frage lautet: "Wie zufrieden sind Sie - alles in allem - mit Ihrem gegenwärtigen Leben?".
 
 ```{r als factor weg 2}
 GESIS_panel <- GESIS_panel %>%
@@ -85,9 +88,59 @@ GESIS_panel <- GESIS_panel %>%
 
 ```{r}
 table(GESIS_panel$fahrrad, GESIS_panel$zufriedenheit)
+```
 
+```{r}
+library(patchwork)
+plots_  = list()
+
+for (z in 1:length(levels(GESIS_panel$zufriedenheit))) {
+  plots_[[z]] <- ggplot(
+    GESIS_panel %>% 
+      filter(zufriedenheit == levels(GESIS_panel$zufriedenheit)[[z]]) %>% 
+      select(fahrrad), aes(x = fahrrad)
+    ) +
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  scale_x_discrete(labels = c(1:5),limits = rev) +
+  theme_bw() +
+  labs(x = "Fahrradnutzung",
+       y = "Prozent")
+  
+  plots_[[z]] <- plots_[[z]] + ggtitle(levels(GESIS_panel$zufriedenheit)[[z]])
+}
+
+plots_[[1]] + plots_[[2]] + plots_[[3]]
+```
+
+```{r bar plot nach zufriedenheit}
+ggplot(GESIS_panel, aes(x = fahrrad, group = zufriedenheit)) +
+  geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat = "count") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_discrete(labels = c(1:5),limits = rev) +
+  scale_fill_brewer(palette = "Blues") +
+  theme_grey() +
+  facet_grid(~ zufriedenheit) +
+  labs(
+    title = "Fahrradnutzung nach Zufriedenheit",
+    x = "Fahrradnutzung",
+    y = "Prozent"
+  )
+```
+
+
+```{r}
+ ggplot(tips, aes(day, group = sex)) + 
+          geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") + 
+          scale_y_continuous(labels=scales::percent) +
+          ylab("relative frequencies") +
+          facet_grid(~sex)
+
+```
+
+
+```{r}
 ggplot(GESIS_panel, aes(x = fahrrad, y = zufriedenheit)) +
-  geom_jitter(alpha = 0.5) +
+  geom_jitter(alpha = 0.5, color = "navyblue") +
   scale_x_discrete(limits=rev) +
   labs(
     title = "Zusammenhang zwischen Lebenszufriedenheit und Fahrradnutzung",
@@ -103,7 +156,11 @@ ggplot(GESIS_panel, aes(x = fahrrad)) +
     title = "Zusammenhang zwischen Lebenszufriedenheit und Fahrradnutzung",
     x = "Fahrradnutzung",
     y = "Prozent",
-    caption = "1: (Fast) nie 2: Seltener 3: An 1 bis 3 Tagen pro Monat 4: An 1 bis 3 Tagen pro Woche 5: (Fast) taeglich"
+    caption = "1: (Fast) nie 
+    2: Seltener 
+    3: An 1 bis 3 Tagen pro Monat 
+    4: An 1 bis 3 Tagen pro Woche 
+    5: (Fast) taeglich"
   )
 
 GESIS_panel %>%
