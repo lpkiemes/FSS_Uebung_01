@@ -1,0 +1,171 @@
+---
+title: "FortStatSoft - 01"
+author: "Laura Kiemes"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r vorbereitung}
+library(tidyverse)
+```
+# Aufgabe 1
+```{r datensatz}
+campus_panel <- read.csv2("ZA5666_v1-0-0.csv") # Datensatz einlesen
+```
+
+```{r subset}
+GESIS_panel <- campus_panel %>%
+  select(starts_with("bc")) %>% # b = 2014, c = 3. Welle
+  filter(bcaj050a == 4) # bcaj050a = Wahlbeteiligung letzte Europawahl
+```
+
+```{r zeilen und spalten}
+Zeilen <- nrow(GESIS_panel)
+Spalten <- ncol(GESIS_panel)
+```
+Der Datensatz `GESIS_panel` beinhaltet `r toString(Zeilen)` Zeilen und `r toString(Spalten)` Spalten.
+
+```{r variable}
+str(GESIS_panel$bcaj051a)
+```
+
+Die Variable `bcaj051a` ist die Wahlentscheidung Europawahl Recall. Die dazugehoerige Frage lautete: "Wenn Sie waehlen waren, für welche Partei haben Sie bei der Europawahl am 25. Mai gestimmt?". Diese single choice Frage hat fuenf zugewiesene Missings: <br />
+Der Wert `-22` steht fuer jenige, die nach dem Recruiting-Interview nicht teilnehmen wollten oder sich aktiv nach dem Willkomenssurvey abgemeldet haben. <br />
+Der Wert `-33` steht fuer Unit-Nonresponse, wobei diese Personen zwar eingeladen waren, aber bei der Welle nicht teilgenommen haben. <br />
+Der Wert `-77` liegt nur bei Online-Befragungen vor, wenn die Person die Frage nicht gesehen hat. <br />
+Der Wert `-99` liegt vor, wenn die Person die Frage nicht beantwortet hat. <br />
+Der Wert `-111` erscheint, wenn die Antwort im Fragebogen zweideutig ist. 
+
+
+Wenn alle Missings gleich behandelt werden, kommt es im Vergleich zur GESIS Kategorisierung zu Informationsverlust. Durch die verschiedenen Missings koennen Fragen viel besser verstanden werden. Wenn nachvollzogen werden kann, wieso die einzelnen Ites nicht beantwortet wurden, kann daraus gelernt werden und kuenftige Fragen anders gestellt werden. Bei zukuenftigen Befragungen koennen so potenziell Missings vermieden werden. Gerade fuer die Methodenforschungs sind diese Informationen relevant.
+
+# Aufgabe 1.2
+```{r lebenszufriedenheit im panel}
+str(GESIS_panel$bcan111a)
+```
+Die Variable `bcan111a` misst die gegenwaertige Zufriedenheit und die dazugehoerige single choice Frage lautet: "Wie zufrieden sind Sie - alles in allem - mit Ihrem gegenwärtigen Leben?".
+
+```{r als factor weg 2}
+GESIS_panel <- GESIS_panel %>%
+  mutate(
+    zufriedenheit = bcan111a, 
+    zufriedenheit = ifelse(
+      (zufriedenheit >= 0 & zufriedenheit <= 10), 
+      zufriedenheit, 
+      NA
+      )
+    ) %>%
+  drop_na(zufriedenheit) %>%
+  mutate(
+    zufriedenheit = cut(
+      zufriedenheit, 
+      breaks = c(0, 3, 6, 10), 
+      include.lowest = TRUE, 
+      labels = c("niedrig", "mittel", "hoch"))
+    )
+
+str(GESIS_panel$bcan111a)
+str(GESIS_panel$zufriedenheit)
+```
+
+```{r fahrradnutzung: bczd039a}
+GESIS_panel <- GESIS_panel %>%
+  mutate(
+    fahrrad = bczd039a,
+    fahrrad = ifelse(fahrrad > 0, fahrrad, NA)) %>%
+  drop_na(fahrrad) %>%
+  mutate(
+    fahrrad = factor(
+      fahrrad, 
+      levels = c(1:5), 
+      labels = c("(Fast) taeglich", "An 1-3 Tagen/Woche", 
+                 "An 1-3 Tagen/Monat", "Seltener", "(Fast) nie")
+      )
+    )
+```
+
+```{r}
+table(GESIS_panel$fahrrad, GESIS_panel$zufriedenheit)
+
+ggplot(GESIS_panel, aes(x = fahrrad, y = zufriedenheit)) +
+  geom_jitter(alpha = 0.5) +
+  scale_x_discrete(limits=rev) +
+  labs(
+    title = "Zusammenhang zwischen Lebenszufriedenheit und Fahrradnutzung",
+    x = "Fahrradnutzung",
+    y = "Zufriedenheit"
+  )
+
+ggplot(GESIS_panel, aes(x = fahrrad)) +
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  scale_x_discrete(labels = c(1:5),limits=rev) +
+  facet_wrap(~ zufriedenheit) +
+  labs(
+    title = "Zusammenhang zwischen Lebenszufriedenheit und Fahrradnutzung",
+    x = "Fahrradnutzung",
+    y = "Prozent",
+    caption = "1: (Fast) nie 2: Seltener 3: An 1 bis 3 Tagen pro Monat 4: An 1 bis 3 Tagen pro Woche 5: (Fast) taeglich"
+  )
+
+GESIS_panel %>%
+  group_by(zufriedenheit, fahrrad) %>%
+  count()
+```
+# Aufgabe 3
+```{r bcan111a}
+GESIS_panel <- GESIS_panel %>%
+  mutate(selbstgluck = bcan111a,
+         selbstgluck = ifelse(selbstgluck <= 10 & selbstgluck >= 0, selbstgluck, NA)) %>%
+  drop_na(selbstgluck) 
+
+selbstgluck_kennzahlen <- GESIS_panel %>%
+  summarise(mean = mean(selbstgluck),
+            mode = unique(selbstgluck)[which.max(tabulate(match(selbstgluck, unique(selbstgluck))))],
+            median = median(selbstgluck),
+            variance = var(selbstgluck),
+            standard_deviation = sd(selbstgluck),
+            inter_quartile_range = IQR(selbstgluck))
+
+selbstgluck_kennzahlen
+```
+Der Median liegt bei `r toString(selbstgluck_kennzahlen$median)`, 50% der Befragten haben einen Wert unter oder gleich angegeben und 50% der Befragten haben einen Wert gleich oder ueber angegeben.
+Die Standardabweichung liegt bei `r toString(selbstgluck_kennzahlen$standard_deviation)`, sie ist ungleich 0, das heisst die Werte streuen um das arithmetische Mittel. Sie zeigt die durchschnittliche Abweichung aller gemessenen Werte vom Mittelwert.
+
+```{r bczd035a klima}
+GESIS_panel <- GESIS_panel %>%
+  mutate(klima = ifelse(bczd035a <= 11 & bczd035a >= 0, bczd035a, NA)) %>%
+  drop_na(klima)
+```
+```{r check}
+assertthat::assert_that(any(!is.na(GESIS_panel$klima)), msg = "Column contains missing values")
+```
+
+```{r bcaj051a partei}
+GESIS_panel <- GESIS_panel %>%
+  mutate(
+    partei = bcaj051a,
+    partei = ifelse(partei >= 1 & partei <= 11, partei, NA)
+    ) %>%
+  drop_na(partei) %>%
+  mutate(
+    partei = factor(
+      partei, 
+      levels = c(1:11), 
+      labels = c("CDU/CSU", "SPD", "FDP", "Die Linke", "Die Gruenen", "AfD", "Piratenpartei", "NPD", "Freie Waehler", "Tierschutzpartei", "Andere Partei")
+      )
+    )
+
+klima_partei_mean <- GESIS_panel %>%
+  select(klima, partei) %>%
+  group_by(partei) %>%
+  summarise(mean = mean(klima)) %>%
+  arrange(desc(mean))
+```
+
+```{r}
+head(klima_partei_mean, 3)
+tail(klima_partei_mean, 3)
+```
+Die drei Parteien mit den hoechsten durchschnittlichen Bewertung zur Einschaetzung des Klimawandels haben die Parteien `r toString(klima_partei_mean$partei[1:2])` und `r toString(klima_partei_mean$partei[3])`. Die drei Parteien mit der niedrigsten durchschnittlichen Bewertung sind `r toString(klima_partei_mean$partei[9:10])` und `r toString(klima_partei_mean$partei[11])`.
+
+Korrektes Kodieren der Missings ist wichtig, da missings so fälschlicher Weise als gueltige Werte aufgenommen werden wuerden. Damit wuerde beispielsweise eine Bewertung beim Klimawandel von 99 verwendet werden, was dann ebenfalls das arithmetische Mittel verzerrt haette.
+
