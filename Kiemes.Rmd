@@ -2,12 +2,15 @@
 title: "FortStatSoft - 01"
 author: "Laura Kiemes"
 date: "`r Sys.Date()`"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 ```{r vorbereitung}
+library(RColorBrewer)
 library(tidyverse)
 ```
-# Aufgabe 1
+# Aufgabe 1.1
 ```{r datensatz}
 campus_panel <- read.csv2("ZA5666_v1-0-0.csv") # Datensatz einlesen
 ```
@@ -89,23 +92,57 @@ GESIS_panel <- GESIS_panel %>%
 ```{r}
 table(GESIS_panel$fahrrad, GESIS_panel$zufriedenheit)
 ```
-```{r bar plot nach fahrrad}
-ggplot(GESIS_panel, aes(x = fahrrad, fill = fahrrad)) +
-  geom_bar(aes(y = (..count..)/sum(..count..))) +
-  scale_x_discrete(labels = c(1:5), limits = rev) +
+```{r}
+GESIS_panel %>%
+  select(zufriedenheit) %>%
+  summarise(n = n())
+```
+
+```{r, fig.dim=c(8, 3)}
+ggplot(GESIS_panel, aes(x = fahrrad)) +
+  geom_bar(aes(y = (..count..)), fill = "lightblue") +
+  scale_x_discrete(labels = levels(GESIS_panel$fahrrad)) +
   facet_wrap(~ zufriedenheit) +
   labs(
-    title = "Zusammenhang zwischen Lebenszufriedenheit und Fahrradnutzung",
+    title = "Gruppierte Lebenszufriedenheit und Fahrradnutzung",
+    x = "Fahrradnutzung",
+    y = "Anzahl",
+    subtitle = "n = 595"
+  ) +
+  coord_flip()
+```
+```{r, fig.dim = c(8, 3)}
+ggplot(GESIS_panel, aes(x = fahrrad, group = zufriedenheit)) +
+  geom_bar(aes(y = ..prop..), stat = "count", fill = "lightblue") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_discrete(labels = levels(GESIS_panel$fahrrad)) +
+  facet_wrap(~ zufriedenheit) +
+  labs(
+    title = "Fahrradnutzung nach Zufriedenheit",
     x = "Fahrradnutzung",
     y = "Prozent"
-  )
+  ) +
+  coord_flip()
+```
+```{r, fig.dim = c(8, 3)}
+ggplot(GESIS_panel, aes(x = zufriedenheit, group = fahrrad)) +
+  geom_bar(aes(y = ..prop..), stat = "count", fill = "lightblue") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_discrete(labels = levels(GESIS_panel$fahrrad)) +
+  facet_wrap(~ fahrrad) +
+  labs(
+    title = "Fahrradnutzung nach Zufriedenheit",
+    x = "Fahrradnutzung",
+    y = "Prozent"
+  ) +
+  coord_flip()
 ```
 
 ```{r bar plot nach zufriedenheit}
 ggplot(GESIS_panel, aes(x = fahrrad, group = zufriedenheit)) +
   geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat = "count") +
   scale_y_continuous(labels = scales::percent) +
-  scale_x_discrete(labels = c(1:5),limits = rev) +
+  scale_x_discrete(limits = rev) +
   scale_fill_discrete(name = c("Fahrradnutzung"), labels = rev(levels(GESIS_panel$fahrrad))) +
   theme(axis.text.x=element_blank(), # ohne achsen label
         axis.ticks.x=element_blank()) + # ohne achsen ticks
@@ -116,18 +153,25 @@ ggplot(GESIS_panel, aes(x = fahrrad, group = zufriedenheit)) +
     y = "Prozent"
   )
 ```
-```{r bar plot fahrrad}
-ggplot(GESIS_panel, aes(x = zufriedenheit, group = fahrrad)) +
-  geom_bar(aes(y = ..prop..), stat = "count", fill = "lightblue") +
-  scale_y_continuous(labels = scales::percent) +
-  theme_grey() +
-  facet_grid(~ fahrrad) +
+
+```{r bar plot nach fahrrad}
+my_palette <- brewer.pal(name = "Oranges", n = 9)[5:9]
+
+ggplot(GESIS_panel, aes(x = fahrrad, fill = fahrrad)) +
+  geom_bar(aes(y = (..count..)/sum(..count..)), color = "black") +
+  scale_x_discrete(limits = rev) +
+  scale_fill_brewer(palette = "Blues") +
+  theme(axis.text.x=element_blank(), # ohne achsen label
+        axis.ticks.x=element_blank(),) + # ohne achsen ticks
+  facet_wrap(~ zufriedenheit) +
   labs(
-    title = "Zufriedenheit nach Fahrradnutzung",
-    x = "Zufriedenheit",
-    y = "Prozent"
+    title = "Zusammenhang zwischen Lebenszufriedenheit und Fahrradnutzung",
+    x = "Fahrradnutzung",
+    y = "Prozent",
+    subtitle = "n = 595"
   )
 ```
+
 ```{r jitter nach zufriedenheit}
 ggplot(GESIS_panel, aes(x = zufriedenheit, y = fahrrad)) +
   geom_jitter(alpha = 0.5, color = "navyblue") +
