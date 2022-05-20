@@ -1,13 +1,18 @@
 ---
-title: "FortStatSoft - 01"
+title: "Fortgeschrittene Statistische Software"
+subtitle: "Uebungsblatt 01"
 author: "Laura Kiemes"
-date: "`r Sys.Date()`"
+date: "`r format(Sys.time(), '%d %B %Y, %H:%M')`"
 output:
-  pdf_document: default
-  html_document: default
+  pdf_document:
+    toc: true
+  html_document:
+    toc: true
+    toc_float: 
+     collapsed: true
+toc-title: "Inhalt"
 ---
 ```{r vorbereitung}
-library(RColorBrewer)
 library(tidyverse)
 ```
 # Aufgabe 1.1
@@ -48,7 +53,7 @@ Wenn alle Missings gleich behandelt werden, kommt es im Vergleich zur GESIS Kate
 ```{r lebenszufriedenheit im panel}
 str(GESIS_panel$bcan111a)
 ```
-Die Variable `bcan111a` misst die gegenwaertige Zufriedenheit von 0 bis 10 Punkten. Die dazugehoerige single choice Frage lautet: "Wie zufrieden sind Sie - alles in allem - mit Ihrem gegenwärtigen Leben?".
+Die Variable `bcan111a` misst die gegenwaertige Zufriedenheit von 0 (niedrig) bis 10 (hoch) Punkten. Die dazugehoerige single choice Frage lautet: "Wie zufrieden sind Sie - alles in allem - mit Ihrem gegenwärtigen Leben?".
 
 ```{r als factor weg 2}
 GESIS_panel <- GESIS_panel %>%
@@ -70,7 +75,10 @@ GESIS_panel <- GESIS_panel %>%
     )
 
 str(GESIS_panel$bcan111a)
+head(GESIS_panel$bcan111a, 10)
+
 str(GESIS_panel$zufriedenheit)
+head(GESIS_panel$zufriedenheit, 10)
 ```
 
 ```{r fahrradnutzung: bczd039a}
@@ -83,15 +91,26 @@ GESIS_panel <- GESIS_panel %>%
     fahrrad = factor(
       fahrrad, 
       levels = c(1:5), 
-      labels = c("(Fast) taeglich", "An 1-3 Tagen/Woche", 
-                 "An 1-3 Tagen/Monat", "Seltener", "(Fast) nie") # 5 Kategorien
+      labels = c("(Fast) taeglich", 
+                 "An 1-3 Tagen/Woche", 
+                 "An 1-3 Tagen/Monat", 
+                 "Seltener", 
+                 "(Fast) nie") # 5 Kategorien
       )
     )
 ```
 
 ```{r}
-table(GESIS_panel$fahrrad, GESIS_panel$zufriedenheit)
+tabelle <- data.frame(table(GESIS_panel$fahrrad, GESIS_panel$zufriedenheit))
+proportionen <- data.frame(round(prop.table(table(GESIS_panel$fahrrad, GESIS_panel$zufriedenheit)), 4))
+
+tabelle_proportionen <- tabelle %>%
+  full_join(proportionen, by = c("Var1", "Var2"), suffix = c("_abs", "_rel")) %>%
+  pivot_wider(names_from = "Var2", values_from = c("Freq_abs", "Freq_rel"))
+
+tabelle_proportionen
 ```
+
 ```{r}
 GESIS_panel %>%
   select(zufriedenheit) %>%
@@ -99,87 +118,70 @@ GESIS_panel %>%
 ```
 
 ```{r, fig.dim=c(8, 3)}
+GESIS_panel %>%
+  select(zufriedenheit) %>%
+  group_by(zufriedenheit) %>%
+  count()
+
 ggplot(GESIS_panel, aes(x = fahrrad)) +
   geom_bar(aes(y = (..count..)), fill = "lightblue") +
   scale_x_discrete(labels = levels(GESIS_panel$fahrrad)) +
-  facet_wrap(~ zufriedenheit) +
+  facet_wrap(~ zufriedenheit, 
+             labeller = labeller(zufriedenheit = c(
+               "niedrig" = "niedrige Lebenszufriedenheit \n n = 35", 
+               "mittel" = "mittlere Lebenszufriedenheit \n n = 124", 
+               "hoch" = "hohe Lebenszufriedenheit \n n = 436"))) +
   labs(
-    title = "Gruppierte Lebenszufriedenheit und Fahrradnutzung",
+    title = "Gruppierte Lebenszufriedenheiten und Fahrradnutzung",
     x = "Fahrradnutzung",
-    y = "Anzahl",
-    subtitle = "n = 595"
+    y = "Anzahl an Befragten",
+    caption = "n = 595"
   ) +
   coord_flip()
 ```
 ```{r, fig.dim = c(8, 3)}
+GESIS_panel %>%
+  select(zufriedenheit) %>%
+  group_by(zufriedenheit) %>%
+  count()
+
 ggplot(GESIS_panel, aes(x = fahrrad, group = zufriedenheit)) +
   geom_bar(aes(y = ..prop..), stat = "count", fill = "lightblue") +
   scale_y_continuous(labels = scales::percent) +
   scale_x_discrete(labels = levels(GESIS_panel$fahrrad)) +
-  facet_wrap(~ zufriedenheit) +
+  facet_wrap(~ zufriedenheit, 
+             labeller = labeller(zufriedenheit = c(
+               "niedrig" = "niedrige Lebenszufriedenheit \n n = 35", 
+               "mittel" = "mittlere Lebenszufriedenheit \n n = 124", 
+               "hoch" = "hohe Lebenszufriedenheit \n n = 436"))) +
   labs(
-    title = "Fahrradnutzung nach Zufriedenheit",
+    title = "Gruppierte Lebenszufriedenheiten und Fahrradnutzung",
     x = "Fahrradnutzung",
-    y = "Prozent"
+    y = "Anteile innerhalb der Gruppen"
   ) +
   coord_flip()
-```
-```{r, fig.dim = c(8, 3)}
-ggplot(GESIS_panel, aes(x = zufriedenheit, group = fahrrad)) +
-  geom_bar(aes(y = ..prop..), stat = "count", fill = "lightblue") +
-  scale_y_continuous(labels = scales::percent) +
-  scale_x_discrete(labels = levels(GESIS_panel$fahrrad)) +
-  facet_wrap(~ fahrrad) +
-  labs(
-    title = "Fahrradnutzung nach Zufriedenheit",
-    x = "Fahrradnutzung",
-    y = "Prozent"
-  ) +
-  coord_flip()
-```
-
-```{r bar plot nach zufriedenheit}
-ggplot(GESIS_panel, aes(x = fahrrad, group = zufriedenheit)) +
-  geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat = "count") +
-  scale_y_continuous(labels = scales::percent) +
-  scale_x_discrete(limits = rev) +
-  scale_fill_discrete(name = c("Fahrradnutzung"), labels = rev(levels(GESIS_panel$fahrrad))) +
-  theme(axis.text.x=element_blank(), # ohne achsen label
-        axis.ticks.x=element_blank()) + # ohne achsen ticks
-  facet_grid(~ zufriedenheit) +
-  labs(
-    title = "Fahrradnutzung nach Zufriedenheit",
-    x = "Fahrradnutzung",
-    y = "Prozent"
-  )
-```
-
-```{r bar plot nach fahrrad}
-my_palette <- brewer.pal(name = "Oranges", n = 9)[5:9]
-
-ggplot(GESIS_panel, aes(x = fahrrad, fill = fahrrad)) +
-  geom_bar(aes(y = (..count..)/sum(..count..)), color = "black") +
-  scale_x_discrete(limits = rev) +
-  scale_fill_brewer(palette = "Blues") +
-  theme(axis.text.x=element_blank(), # ohne achsen label
-        axis.ticks.x=element_blank(),) + # ohne achsen ticks
-  facet_wrap(~ zufriedenheit) +
-  labs(
-    title = "Zusammenhang zwischen Lebenszufriedenheit und Fahrradnutzung",
-    x = "Fahrradnutzung",
-    y = "Prozent",
-    subtitle = "n = 595"
-  )
 ```
 
 ```{r jitter nach zufriedenheit}
 ggplot(GESIS_panel, aes(x = zufriedenheit, y = fahrrad)) +
-  geom_jitter(alpha = 0.5, color = "navyblue") +
+  geom_jitter(alpha = 0.5) +
   scale_y_discrete(limits = rev) +
   labs(
-    title = "Zusammenhang zwischen Fahrradnutzung  und Lebenszufriedenheit",
+    title = "Fahrradnutzung  und Lebenszufriedenheit",
     x = "Zufriedenheit",
-    y = "Fahrradnutzung"
+    y = "Fahrradnutzung",
+    subtitle = "n = 595"
+  )
+```
+```{r}
+ggplot(GESIS_panel, aes(x = zufriedenheit, y = fahrrad)) +
+  geom_count() +
+  scale_y_discrete(limits = rev) +
+  labs(
+    title = "Fahrradnutzung  und Lebenszufriedenheit",
+    x = "Zufriedenheit",
+    y = "Fahrradnutzung",
+    subtitle = "n = 595"
   )
 ```
 
@@ -187,12 +189,17 @@ ggplot(GESIS_panel, aes(x = zufriedenheit, y = fahrrad)) +
 ```{r bcan111a}
 GESIS_panel <- GESIS_panel %>%
   mutate(selbstgluck = bcan111a,
-         selbstgluck = ifelse(selbstgluck <= 10 & selbstgluck >= 0, selbstgluck, NA)) %>%
+         selbstgluck = ifelse(
+           selbstgluck <= 10 & selbstgluck >= 0, 
+           selbstgluck, 
+           NA)) %>%
   drop_na(selbstgluck) 
 
 selbstgluck_kennzahlen <- GESIS_panel %>%
   summarise(mean = mean(selbstgluck),
-            mode = unique(selbstgluck)[which.max(tabulate(match(selbstgluck, unique(selbstgluck))))],
+            mode = unique(selbstgluck)[which.max(tabulate(match(
+              selbstgluck, 
+              unique(selbstgluck))))],
             median = median(selbstgluck),
             variance = var(selbstgluck),
             standard_deviation = sd(selbstgluck),
@@ -201,7 +208,7 @@ selbstgluck_kennzahlen <- GESIS_panel %>%
 selbstgluck_kennzahlen
 ```
 Der Median liegt bei `r toString(selbstgluck_kennzahlen$median)`, 50% der Befragten haben einen Wert unter oder gleich angegeben und 50% der Befragten haben einen Wert gleich oder ueber angegeben.
-Die Standardabweichung liegt bei `r toString(selbstgluck_kennzahlen$standard_deviation)`, sie ist ungleich 0, das heisst die Werte streuen um das arithmetische Mittel. Sie zeigt die durchschnittliche Abweichung aller gemessenen Werte vom Mittelwert.
+Die Standardabweichung liegt bei rund `r toString(round(selbstgluck_kennzahlen$standard_deviation, 4))`, sie ist ungleich 0, das heisst die Werte streuen um das arithmetische Mittel. Sie zeigt die durchschnittliche Abweichung aller gemessenen Werte vom Mittelwert.
 
 # Aufgabe 1.4
 ```{r bczd035a klima}
@@ -209,8 +216,10 @@ GESIS_panel <- GESIS_panel %>%
   mutate(klima = ifelse(bczd035a <= 11 & bczd035a >= 0, bczd035a, NA)) %>%
   drop_na(klima)
 ```
+
 ```{r check}
-assertthat::assert_that(any(!is.na(GESIS_panel$klima)), msg = "Column contains missing values")
+assertthat::assert_that(any(!is.na(GESIS_panel$klima)), 
+                        msg = "Column contains missing values")
 ```
 
 ```{r bcaj051a partei}
@@ -224,7 +233,11 @@ GESIS_panel <- GESIS_panel %>%
     partei = factor(
       partei, 
       levels = c(1:11), 
-      labels = c("CDU/CSU", "SPD", "FDP", "Die Linke", "Die Gruenen", "AfD", "Piratenpartei", "NPD", "Freie Waehler", "Tierschutzpartei", "Andere Partei")
+      labels = c(
+        "CDU/CSU", "SPD", "FDP", 
+        "Die Linke", "Die Gruenen", "AfD", 
+        "Piratenpartei", "NPD", "Freie Waehler", 
+        "Tierschutzpartei", "Andere Partei")
       )
     )
 
