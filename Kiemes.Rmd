@@ -101,14 +101,22 @@ GESIS_panel <- GESIS_panel %>%
 ```
 
 ```{r}
+table(GESIS_panel$fahrrad, GESIS_panel$zufriedenheit)
+
 tabelle <- data.frame(table(GESIS_panel$fahrrad, GESIS_panel$zufriedenheit))
-proportionen <- data.frame(round(prop.table(table(GESIS_panel$fahrrad, GESIS_panel$zufriedenheit)), 4))
+proportionen <- data.frame(
+  round(
+    prop.table(
+      table(
+        GESIS_panel$fahrrad, GESIS_panel$zufriedenheit))
+    , 4))
 
 tabelle_proportionen <- tabelle %>%
   full_join(proportionen, by = c("Var1", "Var2"), suffix = c("_abs", "_rel")) %>%
   pivot_wider(names_from = "Var2", values_from = c("Freq_abs", "Freq_rel"))
 
-tabelle_proportionen
+tabelle_proportionen[, 1:4]
+tabelle_proportionen[, c(1, 5, 6, 7)]
 ```
 
 ```{r}
@@ -117,28 +125,6 @@ GESIS_panel %>%
   summarise(n = n())
 ```
 
-```{r, fig.dim=c(8, 3)}
-GESIS_panel %>%
-  select(zufriedenheit) %>%
-  group_by(zufriedenheit) %>%
-  count()
-
-ggplot(GESIS_panel, aes(x = fahrrad)) +
-  geom_bar(aes(y = (..count..)), fill = "lightblue") +
-  scale_x_discrete(labels = levels(GESIS_panel$fahrrad)) +
-  facet_wrap(~ zufriedenheit, 
-             labeller = labeller(zufriedenheit = c(
-               "niedrig" = "niedrige Lebenszufriedenheit \n n = 35", 
-               "mittel" = "mittlere Lebenszufriedenheit \n n = 124", 
-               "hoch" = "hohe Lebenszufriedenheit \n n = 436"))) +
-  labs(
-    title = "Gruppierte Lebenszufriedenheiten und Fahrradnutzung",
-    x = "Fahrradnutzung",
-    y = "Anzahl an Befragten",
-    caption = "n = 595"
-  ) +
-  coord_flip()
-```
 ```{r, fig.dim = c(8, 3)}
 GESIS_panel %>%
   select(zufriedenheit) %>%
@@ -160,29 +146,6 @@ ggplot(GESIS_panel, aes(x = fahrrad, group = zufriedenheit)) +
     y = "Anteile innerhalb der Gruppen"
   ) +
   coord_flip()
-```
-
-```{r jitter nach zufriedenheit}
-ggplot(GESIS_panel, aes(x = zufriedenheit, y = fahrrad)) +
-  geom_jitter(alpha = 0.5) +
-  scale_y_discrete(limits = rev) +
-  labs(
-    title = "Fahrradnutzung  und Lebenszufriedenheit",
-    x = "Zufriedenheit",
-    y = "Fahrradnutzung",
-    subtitle = "n = 595"
-  )
-```
-```{r}
-ggplot(GESIS_panel, aes(x = zufriedenheit, y = fahrrad)) +
-  geom_count() +
-  scale_y_discrete(limits = rev) +
-  labs(
-    title = "Fahrradnutzung  und Lebenszufriedenheit",
-    x = "Zufriedenheit",
-    y = "Fahrradnutzung",
-    subtitle = "n = 595"
-  )
 ```
 
 # Aufgabe 1.3
